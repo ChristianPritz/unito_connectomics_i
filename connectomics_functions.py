@@ -370,18 +370,14 @@ def plot_network(G, node_size_factor=30, edge_width_factor=2, cmap="viridis", fi
     plt.show()
 
 
-def visualize_nx_graph(
-                        G,
-                        physics=True,
-                        notebook=True,
-                        node_size=30,
-                        edge_width_factor=1,
-                        label_font_size=20,
-                        weight_label="Weight"
-                        ):
-
-
-    net = Network(height="800px", width="100%", directed=G.is_directed())
+def visualize_nx_graph_inline(G,
+                              physics=True,
+                              node_size=30,
+                              edge_width_factor=1,
+                              label_font_size=20,
+                              weight_label="Weight"):
+    
+    net = Network(height="800px", width="100%", directed=G.is_directed(), notebook=True)
 
     # Physics
     if physics:
@@ -390,37 +386,28 @@ def visualize_nx_graph(
         net.force_atlas_2based(gravity=-100)
         net.toggle_physics(False)
 
-    # Add nodes
+    # Nodes
     for node in G.nodes():
         net.add_node(
             node,
             size=node_size,
             label=str(node),
             title=str(node),
-            font={'size': label_font_size, 'face': 'arial', 'align': 'center'},
-            labelHighlightBold=False,
+            font={'size': label_font_size, 'align': 'center'},
         )
 
-    # Add edges
+    # Edges
     for u, v, data in G.edges(data=True):
         w = data.get(weight_label, 1)
         net.add_edge(
             u, v,
             width=w * edge_width_factor,
             arrows="to",
-            arrowStrikethrough=False,
-            smooth=True,
+            smooth=True
         )
 
-    # Always save to a fixed path
-    out_path = "./content/nx_graph.html"
-    net.write_html(out_path)
-
-    if notebook:
-        display(IFrame(out_path, width="100%", height="600px"))
-        print(f"Graph displayed inline. Saved at: {out_path}")
-    else:
-        print(f"Graph saved to: {out_path}")
+    # Direct inline display — NO FILE SAVED
+    return net.show("graph.html", notebook=True)
 
         
 print("Imports are sucessufl #######################################")
