@@ -2,6 +2,10 @@ import pandas as pd
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
+from pyvis.network import Network
+import networkx as nx
+from IPython.display import IFrame, display
+import tempfile, webbrowser, os
 
 def plot_adjacency_matrix(G, sort_nodes=True, cmap="jet", step=1, figsize=(2,2)):
     """
@@ -43,6 +47,66 @@ def plot_adjacency_matrix(G, sort_nodes=True, cmap="jet", step=1, figsize=(2,2))
     plt.tight_layout()
     plt.show()
 
+
+def average_connection_distance(G, pos):
+    dist = {}
+    for node in G.nodes():
+        neighbors = list(G.neighbors(node))
+        if neighbors:
+            dists = [np.linalg.norm(np.array(pos[node]) - np.array(pos[n]))
+                     for n in neighbors if n in pos]
+            dist[node] = np.mean(dists) if dists else np.nan
+        else:
+            dist[node] = np.nan
+    return dist
+
+
+
+def nodal_efficiency(G):
+    eff = {}
+    length_dict = dict(nx.all_pairs_shortest_path_length(G))
+    for node in G.nodes():
+        L = [length_dict[node][other]
+             for other in G.nodes() if other != node and other in length_dict[node]]
+        eff[node] = np.mean([1/l for l in L if l > 0]) if L else 0
+    return eff
+
+
+def average_connection_distance(G, pos):
+    dist = {}
+    for node in G.nodes():
+        neighbors = list(G.neighbors(node))
+        if neighbors:
+            dists = [np.linalg.norm(np.array(pos[node]) - np.array(pos[n]))
+                     for n in neighbors if n in pos]
+            dist[node] = np.mean(dists) if dists else np.nan
+        else:
+            dist[node] = np.nan
+    return dist
+
+
+def nodal_efficiency(G):
+    eff = {}
+    length_dict = dict(nx.all_pairs_shortest_path_length(G))
+    for node in G.nodes():
+        L = [length_dict[node][other]
+             for other in G.nodes() if other != node and other in length_dict[node]]
+        eff[node] = np.mean([1/l for l in L if l > 0]) if L else 0
+    return eff
+
+def participation_coefficient(G, modules):
+    pc = {}
+    for node in G.nodes():
+        ki = G.degree(node)
+        if ki == 0:
+            pc[node] = 0
+            continue
+        sum_frac_sq = 0
+        for m in set(modules.values()):
+            kis = sum(1 for nbr in G.neighbors(node) if modules[nbr] == m)
+            sum_frac_sq += (kis / ki) ** 2
+        pc[node] = 1 - sum_frac_sq
+    return pc
 
 
 def metric_set(G):
@@ -307,6 +371,52 @@ def plot_network(G, node_size_factor=30, edge_width_factor=2, cmap="viridis", fi
 
 
 
+def visualize_nx_graph(G, physics=True, notebook=True, node_size=30, edge_width_factor=1, label_font_size=20,weight_label="Weight"):
+    
+    net = Network(height="800px", width="100%", directed=G.is_directed())
+
+
+    if physics:
+        net.barnes_hut()
+    else:
+        net.force_atlas_2based(gravity=-100)
+        net.toggle_physics(False)
+
+
+    for node in G.nodes():
+        net.add_node(
+            node,
+            size=node_size,
+            label=str(node),
+            title=str(node),
+            font={'size': label_font_size, 'face': 'arial', 'align': 'center'},
+            labelHighlightBold=False  
+        )
+
+
+    for u, v, data in G.edges(data=True):
+        w = data.get(weight_label, 1)
+        net.add_edge(
+            u, v,
+            width=w * edge_width_factor,
+            arrows="to",
+            arrowStrikethrough=False,
+            smooth=True  # makes arrows look nicer for thick lines
+        )
+
+    if notebook:
+        tmp_file = "nx_graph.html"
+        net.write_html(tmp_file)
+        display(IFrame(tmp_file, width="100%", height="600px"))
+        print(f"Graph displayed inline, file saved as {os.path.abspath(tmp_file)}")
+    else:
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".html")
+        tmp_name = tmp.name
+        tmp.close()
+        net.write_html(tmp_name)
+        webbrowser.open("file://" + tmp_name)
+        print(f"Graph opened in your browser, temp file: {tmp_name}")
+        
 print("Imports are sucessufl #######################################")
 
 
