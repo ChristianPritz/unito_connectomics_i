@@ -377,7 +377,13 @@ def visualize_graph(G,
                               label_font_size=20,
                               weight_label="Weight"):
     
-    net = Network(height="800px", width="100%", directed=G.is_directed(), notebook=True)
+    net = Network(
+        height="800px",
+        width="100%",
+        directed=True,
+        notebook=True,
+        cdn_resources='in_line'  # or 'remote'
+    )
 
     # Physics
     if physics:
