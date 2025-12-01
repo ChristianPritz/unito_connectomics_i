@@ -370,7 +370,7 @@ def plot_network(G, node_size_factor=30, edge_width_factor=2, cmap="viridis", fi
     plt.show()
 
 
-def visualize_nx_graph_inline(G,
+def visualize_nx_graph(G,
                               physics=True,
                               node_size=30,
                               edge_width_factor=1,
