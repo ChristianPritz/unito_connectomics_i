@@ -413,7 +413,7 @@ def visualize_nx_graph(
         )
 
     # Always save to a fixed path
-    out_path = "/content/nx_graph.html"
+    out_path = "./content/nx_graph.html"
     net.write_html(out_path)
 
     if notebook:
