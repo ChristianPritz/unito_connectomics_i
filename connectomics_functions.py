@@ -371,18 +371,73 @@ def plot_network(G, node_size_factor=30, edge_width_factor=2, cmap="viridis", fi
 
 
 
-def visualize_nx_graph(G, physics=True, notebook=True, node_size=30, edge_width_factor=1, label_font_size=20,weight_label="Weight"):
+# def visualize_nx_graph(G, physics=True, notebook=True, node_size=30, edge_width_factor=1, label_font_size=20,weight_label="Weight"):
     
+#     net = Network(height="800px", width="100%", directed=G.is_directed())
+
+
+#     if physics:
+#         net.barnes_hut()
+#     else:
+#         net.force_atlas_2based(gravity=-100)
+#         net.toggle_physics(False)
+
+
+#     for node in G.nodes():
+#         net.add_node(
+#             node,
+#             size=node_size,
+#             label=str(node),
+#             title=str(node),
+#             font={'size': label_font_size, 'face': 'arial', 'align': 'center'},
+#             labelHighlightBold=False  
+#         )
+
+
+#     for u, v, data in G.edges(data=True):
+#         w = data.get(weight_label, 1)
+#         net.add_edge(
+#             u, v,
+#             width=w * edge_width_factor,
+#             arrows="to",
+#             arrowStrikethrough=False,
+#             smooth=True  # makes arrows look nicer for thick lines
+#         )
+
+#     if notebook:
+#         tmp_file = "nx_graph.html"
+#         net.write_html(tmp_file)
+#         display(IFrame(tmp_file, width="100%", height="600px"))
+#         print(f"Graph displayed inline, file saved as {os.path.abspath(tmp_file)}")
+#     else:
+#         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".html")
+#         tmp_name = tmp.name
+#         tmp.close()
+#         net.write_html(tmp_name)
+#         webbrowser.open("file://" + tmp_name)
+#         print(f"Graph opened in your browser, temp file: {tmp_name}")
+
+def visualize_nx_graph(
+    G,
+    physics=True,
+    notebook=True,
+    node_size=30,
+    edge_width_factor=1,
+    label_font_size=20,
+    weight_label="Weight"
+    ):
+    
+    # Create pyvis network
     net = Network(height="800px", width="100%", directed=G.is_directed())
 
-
+    # Physics
     if physics:
         net.barnes_hut()
     else:
         net.force_atlas_2based(gravity=-100)
         net.toggle_physics(False)
 
-
+    # Add nodes
     for node in G.nodes():
         net.add_node(
             node,
@@ -390,10 +445,10 @@ def visualize_nx_graph(G, physics=True, notebook=True, node_size=30, edge_width_
             label=str(node),
             title=str(node),
             font={'size': label_font_size, 'face': 'arial', 'align': 'center'},
-            labelHighlightBold=False  
+            labelHighlightBold=False
         )
 
-
+    # Add weighted edges
     for u, v, data in G.edges(data=True):
         w = data.get(weight_label, 1)
         net.add_edge(
@@ -401,21 +456,23 @@ def visualize_nx_graph(G, physics=True, notebook=True, node_size=30, edge_width_
             width=w * edge_width_factor,
             arrows="to",
             arrowStrikethrough=False,
-            smooth=True  # makes arrows look nicer for thick lines
+            smooth=True
         )
 
+    # Always save in current working directory
+    out_path = os.path.join(os.getcwd(), "nx_graph.html")
+
+    net.write_html(out_path)
+
     if notebook:
-        tmp_file = "nx_graph.html"
-        net.write_html(tmp_file)
-        display(IFrame(tmp_file, width="100%", height="600px"))
-        print(f"Graph displayed inline, file saved as {os.path.abspath(tmp_file)}")
+        # Show inline in Colab
+        display(IFrame(out_path, width="100%", height="600px"))
+        print(f"Graph displayed inline. Saved at: {out_path}")
     else:
-        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".html")
-        tmp_name = tmp.name
-        tmp.close()
-        net.write_html(tmp_name)
-        webbrowser.open("file://" + tmp_name)
-        print(f"Graph opened in your browser, temp file: {tmp_name}")
+        # Fallback: show path for manual opening
+        print(f"Graph saved to: {out_path}")
+
+
         
 print("Imports are sucessufl #######################################")
 
