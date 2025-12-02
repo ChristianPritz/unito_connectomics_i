@@ -4,8 +4,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pyvis.network import Network
 import networkx as nx
-from IPython.display import IFrame, display
+from IPython.display import IFrame, display,HTML
 import tempfile, webbrowser, os
+
 
 def plot_adjacency_matrix(G, sort_nodes=True, cmap="jet", step=1, figsize=(2,2)):
     """
@@ -370,19 +371,19 @@ def plot_network(G, node_size_factor=30, edge_width_factor=2, cmap="viridis", fi
     plt.show()
 
 
-def visualize_graph(G,
-                              physics=True,
-                              node_size=30,
-                              edge_width_factor=1,
-                              label_font_size=20,
-                              weight_label="Weight"):
-    
+def visualize_graph_inline(G,
+                           physics=True,
+                           node_size=30,
+                           edge_width_factor=1,
+                           label_font_size=20,
+                           weight_label="Weight"):
+
     net = Network(
         height="800px",
         width="100%",
         directed=True,
         notebook=True,
-        cdn_resources='in_line'  # or 'remote'
+        cdn_resources="in_line"
     )
 
     # Physics
@@ -412,9 +413,9 @@ def visualize_graph(G,
             smooth=True
         )
 
-    # Direct inline display — NO FILE SAVED
-    return net.show("graph.html", notebook=True)
-
+    # Render HTML as a string (no file written!)
+    html = net.generate_html()
+    return HTML(html)
         
 print("Imports are sucessufl #######################################")
 
