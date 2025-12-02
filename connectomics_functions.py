@@ -2,7 +2,6 @@ import pandas as pd
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
-from pyvis.network import Network
 import networkx as nx
 from IPython.display import IFrame, display,HTML
 import tempfile, webbrowser, os
@@ -326,13 +325,9 @@ def plot_weight_distribution(G, bins=50, fit_powerlaw=True):
     plt.show()
 
 
-def plot_network(G, node_size_factor=30, edge_width_factor=2, cmap="viridis", figsize=(5,5)):
-    """
-    Draws the network using matplotlib:
-    - node size proportional to degree
-    - edge width proportional to weight
-    - colored edges
-    """
+
+def plot_network(G, node_size_factor=300, edge_width_factor=2, cmap="viridis", figsize=(5,5)):
+
     # Extract weights
     weights = np.array([
         d.get("Weight", d.get("weight", 1))
@@ -346,18 +341,25 @@ def plot_network(G, node_size_factor=30, edge_width_factor=2, cmap="viridis", fi
         w_min, w_max = weights.min(), weights.max()
         weights_norm = (weights - w_min) / (w_max - w_min + 1e-9)
 
+    # Layout
     pos = nx.spring_layout(G, seed=42)
 
+    # Node sizes (scaled by degree)
     node_sizes = [G.degree(n) * node_size_factor for n in G.nodes()]
 
     plt.figure(figsize=figsize)
 
+    # Draw nodes with blue fill and black edge
     nx.draw_networkx_nodes(
         G, pos,
         node_size=node_sizes,
-        node_color="black",
-        alpha=0.8
+        node_color="skyblue",
+        edgecolors="black",
+        linewidths=1.5,
+        alpha=0.9
     )
+
+    # Draw edges colored by weight
     nx.draw_networkx_edges(
         G, pos,
         width=weights * edge_width_factor,
@@ -366,66 +368,20 @@ def plot_network(G, node_size_factor=30, edge_width_factor=2, cmap="viridis", fi
         alpha=0.7
     )
 
+    # Draw labels **inside nodes**
+    nx.draw_networkx_labels(
+        G, pos,
+        labels={n: str(n) for n in G.nodes()},
+        font_size=8,
+        font_color="black",
+        font_weight="bold"
+    )
+
     plt.axis("off")
     plt.title("Network Graph (weighted)")
     plt.show()
 
 
-def visualize_graph(G,
-                    physics=True,
-                    node_size=30,
-                    edge_width_factor=1,
-                    label_font_size=20,
-                    weight_label="Weight",
-                    filename="graph.html"):
-
-    # Ensure 'graphs' folder exists
-    folder = "graphs"
-    os.makedirs(folder, exist_ok=True)
-    filepath = os.path.join(folder, filename)
-
-    # Create PyVis network
-    net = Network(
-        height="800px",
-        width="100%",
-        directed=True,
-        notebook=True,
-        cdn_resources="in_line"
-    )
-
-    # Physics
-    if physics:
-        net.barnes_hut()
-    else:
-        net.force_atlas_2based(gravity=-100)
-        net.toggle_physics(False)
-
-    # Add nodes
-    for node in G.nodes():
-        net.add_node(
-            node,
-            size=node_size,
-            label=str(node),
-            title=str(node),
-            font={'size': label_font_size, 'align': 'center'},
-        )
-
-    # Add edges
-    for u, v, data in G.edges(data=True):
-        w = data.get(weight_label, 1)
-        net.add_edge(
-            u, v,
-            width=w * edge_width_factor,
-            arrows="to",
-            smooth=True
-        )
-
-    # Save HTML temporarily
-    net.show(filepath)
-
-    # Display in Colab notebook
-    display(IFrame(src=filepath, width="100%", height="800px"))
-        
 print("Imports are sucessufl #######################################")
 
 
