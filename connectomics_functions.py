@@ -316,11 +316,7 @@ def plot_rich_club(rc_real,rc_rand_avg,rc_rand_std,rc_norm,k_vals,k_rich):
     plt.show()
 
 def plot_weight_distribution(G, bins=50, fit_powerlaw=True):
-    """
-    Extracts synaptic weights from a NetworkX graph and plots:
-    - histogram of weights
-    - optional power-law fit on log-log scale
-    """
+
     # Extract all weights (skip zeros and missing)
     weights = np.array([
         d.get("Weight", d.get("weight"))
@@ -333,46 +329,47 @@ def plot_weight_distribution(G, bins=50, fit_powerlaw=True):
         print("No positive weights found.")
         return
 
-    fig, ax = plt.subplots(1, 2, figsize=(8, 3.5))
+    fig, ax = plt.subplots(1, 2, figsize=(10, 4))
 
     # --- Histogram (linear scale)
-    ax[0].hist(weights, bins=bins, edgecolor="black")
+    counts, bin_edges, _ = ax[0].hist(weights, bins=bins, edgecolor="black")
     ax[0].set_title("Synaptic Weight Histogram")
     ax[0].set_xlabel("Weight")
     ax[0].set_ylabel("Count")
 
-    # --- Log-log distribution
-    ax[1].scatter(weights, np.ones_like(weights), s=1, alpha=0.5)
+    # --- Log-log distribution using histogram counts
+    bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+    nonzero = counts > 0
+    ax[1].scatter(bin_centers[nonzero], counts[nonzero], s=20, alpha=0.7)
     ax[1].set_xscale("log")
     ax[1].set_yscale("log")
     ax[1].set_title("Log-Log Weight Distribution")
     ax[1].set_xlabel("Weight")
+    ax[1].set_ylabel("Count")
 
     # --- Fit power law
-    if fit_powerlaw:
+    if fit_powerlaw and np.any(nonzero):
         try:
             import powerlaw
+            # Fit only positive counts
             fit = powerlaw.Fit(weights, verbose=False)
             alpha = fit.power_law.alpha
             xmin = fit.power_law.xmin
-            ax[1].plot(
-                np.linspace(xmin, weights.max(), 200),
-                (np.linspace(xmin, weights.max(), 200) ** -alpha) * len(weights),
-                label=f"Power-law fit (α={alpha:.2f})"
-            )
+            x_fit = np.linspace(xmin, weights.max(), 200)
+            y_fit = x_fit ** -alpha * len(weights)  # approximate counts
+            ax[1].plot(x_fit, y_fit, 'r--', label=f"Power-law fit (α={alpha:.2f})")
             ax[1].legend()
         except ImportError:
-            # fallback: linear fit in log-log space
-            log_w = np.log10(weights)
-            y = np.arange(len(weights)) + 1
-            coeff = np.polyfit(log_w, np.log10(y), 1)
-            ax[1].plot(weights, 10 ** (coeff[1] + coeff[0]*log_w),
-                       label=f"Log-log fit slope={coeff[0]:.2f}")
+            # fallback: linear fit in log-log space using histogram
+            log_x = np.log10(bin_centers[nonzero])
+            log_y = np.log10(counts[nonzero])
+            coeff = np.polyfit(log_x, log_y, 1)
+            y_fit = 10 ** (coeff[1] + coeff[0] * log_x)
+            ax[1].plot(bin_centers[nonzero], y_fit, 'r--', label=f"Log-log fit slope={coeff[0]:.2f}")
             ax[1].legend()
 
     plt.tight_layout()
     plt.show()
-
 
 
 def plot_network(G, node_size=300, edge_width_factor=2, cmap="viridis", figsize=(5,5)):
