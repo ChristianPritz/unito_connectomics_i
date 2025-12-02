@@ -7,9 +7,50 @@ from IPython.display import IFrame, display,HTML
 import tempfile, webbrowser, os
 
 
+# def plot_adjacency_matrix(G, sort_nodes=True, cmap="jet", step=1, figsize=(2,2)):
+#     """
+#     Plot adjacency matrix with zeros shown as white.
+#     """
+#     # Optionally sort nodes by degree
+#     if sort_nodes:
+#         nodes = sorted(G.nodes(), key=lambda x: G.degree(x), reverse=True)
+#     else:
+#         nodes = list(G.nodes())
+
+#     # Create adjacency matrix
+#     A = nx.to_numpy_array(G, nodelist=nodes, weight="Weight")  
+#     # Mask zeros so they appear white
+#     A_masked = np.ma.masked_where(A == 0, A)
+
+#     # Load the requested colormap correctly
+#     cmap_mod = plt.colormaps[cmap].copy()   # <-- FIXED
+#     cmap_mod.set_bad(color="white")          # masked = white
+
+#     # Plot
+#     fig, ax = plt.subplots(figsize=figsize, dpi=600)
+#     im = ax.imshow(A_masked, interpolation="nearest", cmap=cmap_mod)
+
+#     # Colorbar
+#     cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+#     cbar.set_label("Edge weight")
+
+#     # Ticks
+#     ax.set_xticks(np.arange(0, len(nodes), step))
+#     ax.set_yticks(np.arange(0, len(nodes), step))
+#     ax.set_xticklabels(nodes[::step], rotation=90, fontsize=4)
+#     ax.set_yticklabels(nodes[::step], fontsize=4)
+
+#     ax.set_xlabel("Neurons", fontsize=6)
+#     ax.set_ylabel("Neurons", fontsize=6)
+#     ax.set_title("Adjacency Matrix - Weights", fontsize=7)
+
+#     plt.tight_layout()
+#     plt.show()
 def plot_adjacency_matrix(G, sort_nodes=True, cmap="jet", step=1, figsize=(2,2)):
     """
     Plot adjacency matrix with zeros shown as white.
+    - Automatically detects 'Weight' or 'weight' edge attributes
+    - Optionally sorts nodes by degree
     """
     # Optionally sort nodes by degree
     if sort_nodes:
@@ -17,14 +58,22 @@ def plot_adjacency_matrix(G, sort_nodes=True, cmap="jet", step=1, figsize=(2,2))
     else:
         nodes = list(G.nodes())
 
-    # Create adjacency matrix
-    A = nx.to_numpy_array(G, nodelist=nodes, weight="Weight")  
+    # Create adjacency matrix manually to ensure correct weights
+    n = len(nodes)
+    A = np.zeros((n, n))
+    for i, u in enumerate(nodes):
+        for j, v in enumerate(nodes):
+            if G.has_edge(u, v):
+                # Prefer 'Weight', then 'weight', default 1
+                w = G[u][v].get("Weight", G[u][v].get("weight", 1))
+                A[i, j] = w
+
     # Mask zeros so they appear white
     A_masked = np.ma.masked_where(A == 0, A)
 
-    # Load the requested colormap correctly
-    cmap_mod = plt.colormaps[cmap].copy()   # <-- FIXED
-    cmap_mod.set_bad(color="white")          # masked = white
+    # Load colormap
+    cmap_mod = plt.colormaps[cmap].copy()
+    cmap_mod.set_bad(color="white")  # masked = white
 
     # Plot
     fig, ax = plt.subplots(figsize=figsize, dpi=600)
@@ -35,8 +84,8 @@ def plot_adjacency_matrix(G, sort_nodes=True, cmap="jet", step=1, figsize=(2,2))
     cbar.set_label("Edge weight")
 
     # Ticks
-    ax.set_xticks(np.arange(0, len(nodes), step))
-    ax.set_yticks(np.arange(0, len(nodes), step))
+    ax.set_xticks(np.arange(0, n, step))
+    ax.set_yticks(np.arange(0, n, step))
     ax.set_xticklabels(nodes[::step], rotation=90, fontsize=4)
     ax.set_yticklabels(nodes[::step], fontsize=4)
 
