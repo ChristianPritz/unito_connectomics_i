@@ -326,7 +326,7 @@ def plot_weight_distribution(G, bins=50, fit_powerlaw=True):
 
 
 
-def plot_network(G, node_size_factor=300, edge_width_factor=2, cmap="viridis", figsize=(5,5)):
+def plot_network(G, node_size=300, edge_width_factor=2, cmap="viridis", figsize=(5,5)):
 
     # Extract weights
     weights = np.array([
@@ -344,31 +344,30 @@ def plot_network(G, node_size_factor=300, edge_width_factor=2, cmap="viridis", f
     # Layout
     pos = nx.spring_layout(G, seed=42)
 
-    # Node sizes (scaled by degree)
-    node_sizes = [G.degree(n) * node_size_factor for n in G.nodes()]
-
     plt.figure(figsize=figsize)
 
-    # Draw nodes with blue fill and black edge
+    # Draw nodes: all same size
     nx.draw_networkx_nodes(
         G, pos,
-        node_size=node_sizes,
+        node_size=node_size,
         node_color="skyblue",
         edgecolors="black",
         linewidths=1.5,
         alpha=0.9
     )
 
-    # Draw edges colored by weight
+    # Draw edges: width scaled by weight
     nx.draw_networkx_edges(
         G, pos,
         width=weights * edge_width_factor,
         edge_color=weights_norm,
         edge_cmap=plt.get_cmap(cmap),
-        alpha=0.7
+        alpha=0.7,
+        arrows=True,
+        connectionstyle='arc3,rad=0.1'
     )
 
-    # Draw labels **inside nodes**
+    # Draw labels inside nodes
     nx.draw_networkx_labels(
         G, pos,
         labels={n: str(n) for n in G.nodes()},
@@ -380,7 +379,6 @@ def plot_network(G, node_size_factor=300, edge_width_factor=2, cmap="viridis", f
     plt.axis("off")
     plt.title("Network Graph (weighted)")
     plt.show()
-
 
 print("Imports are sucessufl #######################################")
 
