@@ -372,12 +372,19 @@ def plot_network(G, node_size_factor=30, edge_width_factor=2, cmap="viridis", fi
 
 
 def visualize_graph(G,
-                           physics=True,
-                           node_size=30,
-                           edge_width_factor=1,
-                           label_font_size=20,
-                           weight_label="Weight"):
+                    physics=True,
+                    node_size=30,
+                    edge_width_factor=1,
+                    label_font_size=20,
+                    weight_label="Weight",
+                    filename="graph.html"):
 
+    # Ensure 'graphs' folder exists
+    folder = "graphs"
+    os.makedirs(folder, exist_ok=True)
+    filepath = os.path.join(folder, filename)
+
+    # Create PyVis network
     net = Network(
         height="800px",
         width="100%",
@@ -393,7 +400,7 @@ def visualize_graph(G,
         net.force_atlas_2based(gravity=-100)
         net.toggle_physics(False)
 
-    # Nodes
+    # Add nodes
     for node in G.nodes():
         net.add_node(
             node,
@@ -403,7 +410,7 @@ def visualize_graph(G,
             font={'size': label_font_size, 'align': 'center'},
         )
 
-    # Edges
+    # Add edges
     for u, v, data in G.edges(data=True):
         w = data.get(weight_label, 1)
         net.add_edge(
@@ -413,9 +420,11 @@ def visualize_graph(G,
             smooth=True
         )
 
-    # Render HTML as a string (no file written!)
-    html = net.generate_html()
-    return HTML(html)
+    # Save HTML temporarily
+    net.show(filepath)
+
+    # Display in Colab notebook
+    display(IFrame(src=filepath, width="100%", height="800px"))
         
 print("Imports are sucessufl #######################################")
 
