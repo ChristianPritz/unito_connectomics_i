@@ -289,24 +289,6 @@ def rich_club(G, method="config_preserving", k_max=None,
         plt.legend()
         plt.show()
 
-        # third: variance among degrees of nodes > k
-        mean_deg_rand = np.array(mean_deg_rand)
-        mm_deg = np.nanmean(mean_deg_rand, axis=0)
-        std_var = np.nanstd(mean_deg_rand, axis=0)
-
-        plt.figure(figsize=(6, 4))
-        print(mean_deg_rand)
-        print(mm_deg)
-        plt.plot(ks, mm_deg, label="Mean variance of degrees (nodes > k)")
-        plt.fill_between(ks, mm_deg - std_var, mm_deg + std_var,
-                         alpha=0.3, label="±1 std")
-        plt.xlabel("Degree threshold k")
-        plt.ylabel("Mean degree among nodes > k")
-        plt.title("Random Networks: Variation of Degrees Above Threshold")
-        plt.grid(True, linestyle="--", alpha=0.4)
-        plt.legend()
-        plt.show()
-
     return rc_real, rc_rand_mean, rc_rand_std, rc_norm
 
 
@@ -461,7 +443,7 @@ def plot_network(G, node_size=300, edge_width_factor=2, cmap="viridis", figsize=
     plt.title("Network Graph (weighted)")
     plt.show()
 
-print("Imports are sucessufl #######################################")
+print("Imports are sucessfull #######################################")
 
 
 
