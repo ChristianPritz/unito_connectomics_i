@@ -184,6 +184,7 @@ def randomize_graph(G, method="config_preserving", nswap=10,swap_factor=100, max
     return G_rand
 
 
+
 def rich_club(G, method="config_preserving", k_max=None,
               nswap=10, max_tries=100000, n_rand=100,
               plot_rand_stats=False):
@@ -192,21 +193,18 @@ def rich_club(G, method="config_preserving", k_max=None,
     G.remove_edges_from(nx.selfloop_edges(G))
     G_und = G.to_undirected()
 
-    # real rich-club coefficients
+    # real RC
     rc_real = nx.rich_club_coefficient(G_und, normalized=False, Q=None)
 
     if k_max is None:
         k_max = max(dict(G_und.degree()).values())
 
-    # -----------------------------
-    # storage for random graph stats
-    # -----------------------------
+    # storage
     rc_rand_list = []
-    deg_counts_rand = []   # number of nodes with deg > k
+    deg_counts_rand = []    # number of nodes with degree > k
+    deg_var_rand = []       # variance of degrees above k
 
-    # -----------------------------
-    # randomization loop
-    # -----------------------------
+    # randomize
     for _ in range(n_rand):
 
         G_rand = randomize_graph(G_und, method=method, nswap=nswap, max_tries=max_tries)
@@ -216,25 +214,34 @@ def rich_club(G, method="config_preserving", k_max=None,
 
         G_rand.remove_edges_from(nx.selfloop_edges(G_rand))
 
-        # rich club for this random graph
+        # RC
         rc_rand = nx.rich_club_coefficient(G_rand, normalized=False, Q=None)
         rc_rand_list.append(rc_rand)
 
         # degrees
         degs_r = dict(G_rand.degree())
-        max_k_r = max(degs_r.values())
 
-        # pad up to k_max
+        # vector of node counts > k
         count_vec = np.zeros(k_max + 1)
+        var_vec = np.zeros(k_max + 1)
 
         for k in range(k_max + 1):
-            count_vec[k] = sum(d > k for d in degs_r.values())
+            # nodes above threshold
+            above_k = [d for d in degs_r.values() if d > k]
+
+            # how many nodes above k?
+            count_vec[k] = len(above_k)
+
+            # variance in degree among these nodes
+            if len(above_k) > 1:
+                var_vec[k] = np.var(above_k)
+            else:
+                var_vec[k] = np.nan
 
         deg_counts_rand.append(count_vec)
+        deg_var_rand.append(var_vec)
 
-    # -----------------------------
-    # processing RC random stats
-    # -----------------------------
+    # RC mean and std
     rc_rand_mean = {}
     rc_rand_std = {}
 
@@ -250,14 +257,16 @@ def rich_club(G, method="config_preserving", k_max=None,
     }
 
     # -----------------------------
-    # Plotting the random degree statistics
+    # PLOTTING
     # -----------------------------
     if plot_rand_stats:
-        deg_counts_rand = np.array(deg_counts_rand)  # n_rand × (k_max+1)
-        mean_deg = deg_counts_rand.mean(axis=0)
-        std_deg = deg_counts_rand.std(axis=0)
 
         ks = np.arange(k_max + 1)
+
+        # first plot: counts of nodes with deg > k
+        deg_counts_rand = np.array(deg_counts_rand)
+        mean_deg = deg_counts_rand.mean(axis=0)
+        std_deg = deg_counts_rand.std(axis=0)
 
         plt.figure(figsize=(6, 4))
         plt.plot(ks, mean_deg, label="Mean # nodes with degree > k")
@@ -265,23 +274,39 @@ def rich_club(G, method="config_preserving", k_max=None,
                          alpha=0.3, label="±1 std")
         plt.xlabel("Degree threshold k")
         plt.ylabel("# Nodes with degree > k")
-        plt.title("Randomized Networks: Degree Distribution vs k")
+        plt.title("Random Networks: Degree Abundance vs k")
         plt.grid(True, linestyle="--", alpha=0.4)
         plt.legend()
         plt.show()
-        
+
+        # second: rich-club stdev
         plt.figure(figsize=(6, 4))
-        plt.plot(np.arange(0,rc_rand_std.size)+1, rc_rand_std, label="stdev in RC coeff")
+        plt.plot(ks, list(rc_rand_std.values()), label="Std Dev of RC(k)")
         plt.xlabel("Degree threshold k")
-        plt.ylabel("Stdev in RC coeff")
-        plt.title("Randomized Networks: stdev in RC coeff")
+        plt.ylabel("Std deviation of RC coefficient")
+        plt.title("Random Networks: RC coefficient variability")
         plt.grid(True, linestyle="--", alpha=0.4)
         plt.legend()
         plt.show()
-        
-        
+
+        # third: variance among degrees of nodes > k
+        deg_var_rand = np.array(deg_var_rand)
+        mean_var = np.nanmean(deg_var_rand, axis=0)
+        std_var = np.nanstd(deg_var_rand, axis=0)
+
+        plt.figure(figsize=(6, 4))
+        plt.plot(ks, mean_var, label="Mean variance of degrees (nodes > k)")
+        plt.fill_between(ks, mean_var - std_var, mean_var + std_var,
+                         alpha=0.3, label="±1 std")
+        plt.xlabel("Degree threshold k")
+        plt.ylabel("Degree variance among nodes > k")
+        plt.title("Random Networks: Variation of Degrees Above Threshold")
+        plt.grid(True, linestyle="--", alpha=0.4)
+        plt.legend()
+        plt.show()
 
     return rc_real, rc_rand_mean, rc_rand_std, rc_norm
+
 
 
 def plot_rich_club(rc_real,rc_rand_avg,rc_rand_std,rc_norm,k_vals,k_rich):
