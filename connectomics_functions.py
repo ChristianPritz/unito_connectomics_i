@@ -7,45 +7,6 @@ from IPython.display import IFrame, display,HTML
 import tempfile, webbrowser, os
 
 
-# def plot_adjacency_matrix(G, sort_nodes=True, cmap="jet", step=1, figsize=(2,2)):
-#     """
-#     Plot adjacency matrix with zeros shown as white.
-#     """
-#     # Optionally sort nodes by degree
-#     if sort_nodes:
-#         nodes = sorted(G.nodes(), key=lambda x: G.degree(x), reverse=True)
-#     else:
-#         nodes = list(G.nodes())
-
-#     # Create adjacency matrix
-#     A = nx.to_numpy_array(G, nodelist=nodes, weight="Weight")  
-#     # Mask zeros so they appear white
-#     A_masked = np.ma.masked_where(A == 0, A)
-
-#     # Load the requested colormap correctly
-#     cmap_mod = plt.colormaps[cmap].copy()   # <-- FIXED
-#     cmap_mod.set_bad(color="white")          # masked = white
-
-#     # Plot
-#     fig, ax = plt.subplots(figsize=figsize, dpi=600)
-#     im = ax.imshow(A_masked, interpolation="nearest", cmap=cmap_mod)
-
-#     # Colorbar
-#     cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-#     cbar.set_label("Edge weight")
-
-#     # Ticks
-#     ax.set_xticks(np.arange(0, len(nodes), step))
-#     ax.set_yticks(np.arange(0, len(nodes), step))
-#     ax.set_xticklabels(nodes[::step], rotation=90, fontsize=4)
-#     ax.set_yticklabels(nodes[::step], fontsize=4)
-
-#     ax.set_xlabel("Neurons", fontsize=6)
-#     ax.set_ylabel("Neurons", fontsize=6)
-#     ax.set_title("Adjacency Matrix - Weights", fontsize=7)
-
-#     plt.tight_layout()
-#     plt.show()
 def plot_adjacency_matrix(G, sort_nodes=True, cmap="jet", step=1, figsize=(2,2)):
     """
     Plot adjacency matrix with zeros shown as white.
@@ -298,7 +259,7 @@ def rich_club(G, method="config_preserving", k_max=None,
 
         ks = np.arange(k_max + 1)
 
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(6, 4))
         plt.plot(ks, mean_deg, label="Mean # nodes with degree > k")
         plt.fill_between(ks, mean_deg - std_deg, mean_deg + std_deg,
                          alpha=0.3, label="±1 std")
@@ -308,6 +269,17 @@ def rich_club(G, method="config_preserving", k_max=None,
         plt.grid(True, linestyle="--", alpha=0.4)
         plt.legend()
         plt.show()
+        
+        plt.figure(figsize=(6, 4))
+        plt.plot(np.arange(0,rc_rand_std.size)+1, rc_rand_std, label="stdev in RC coeff")
+        plt.xlabel("Degree threshold k")
+        plt.ylabel("Stdev in RC coeff")
+        plt.title("Randomized Networks: stdev in RC coeff")
+        plt.grid(True, linestyle="--", alpha=0.4)
+        plt.legend()
+        plt.show()
+        
+        
 
     return rc_real, rc_rand_mean, rc_rand_std, rc_norm
 
