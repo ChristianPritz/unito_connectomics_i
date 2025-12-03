@@ -202,7 +202,7 @@ def rich_club(G, method="config_preserving", k_max=None,
     # storage
     rc_rand_list = []
     deg_counts_rand = []    # number of nodes with degree > k
-    deg_var_rand = []       # variance of degrees above k
+    mean_deg_rand = []       # variance of degrees above k
 
     # randomize
     for _ in range(n_rand):
@@ -234,12 +234,12 @@ def rich_club(G, method="config_preserving", k_max=None,
 
             # variance in degree among these nodes
             if len(above_k) > 1:
-                var_vec[k] = np.var(above_k)
+                var_vec[k] = np.mean(above_k)
             else:
                 var_vec[k] = np.nan
 
         deg_counts_rand.append(count_vec)
-        deg_var_rand.append(var_vec)
+        mean_deg_rand.append(var_vec)
 
     # RC mean and std
     rc_rand_mean = {}
@@ -290,16 +290,18 @@ def rich_club(G, method="config_preserving", k_max=None,
         plt.show()
 
         # third: variance among degrees of nodes > k
-        deg_var_rand = np.array(deg_var_rand)
-        mean_var = np.nanmean(deg_var_rand, axis=0)
-        std_var = np.nanstd(deg_var_rand, axis=0)
+        mean_deg_rand = np.array(mean_deg_rand)
+        mm_deg = np.nanmean(mean_deg_rand, axis=0)
+        std_var = np.nanstd(mean_deg_rand, axis=0)
 
         plt.figure(figsize=(6, 4))
-        plt.plot(ks, mean_var, label="Mean variance of degrees (nodes > k)")
-        plt.fill_between(ks, mean_var - std_var, mean_var + std_var,
+        print(mean_deg_rand)
+        print(mm_deg)
+        plt.plot(ks, mm_deg, label="Mean variance of degrees (nodes > k)")
+        plt.fill_between(ks, mm_deg - std_var, mm_deg + std_var,
                          alpha=0.3, label="±1 std")
         plt.xlabel("Degree threshold k")
-        plt.ylabel("Degree variance among nodes > k")
+        plt.ylabel("Mean degree among nodes > k")
         plt.title("Random Networks: Variation of Degrees Above Threshold")
         plt.grid(True, linestyle="--", alpha=0.4)
         plt.legend()
