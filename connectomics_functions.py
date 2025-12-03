@@ -389,7 +389,8 @@ def plot_weight_distribution(G, bins=50, fit_powerlaw=True):
     plt.show()
 
 
-def plot_network(G, node_size=300, edge_width_factor=2, cmap="viridis", figsize=(5,5)):
+def plot_network(G, node_size=300, edge_width_factor=2, cmap="viridis",
+                 figsize=(5,5), show_labels=True):
 
     # Extract weights
     weights = np.array([
@@ -409,7 +410,7 @@ def plot_network(G, node_size=300, edge_width_factor=2, cmap="viridis", figsize=
 
     plt.figure(figsize=figsize)
 
-    # Draw nodes: all same size
+    # Draw nodes
     nx.draw_networkx_nodes(
         G, pos,
         node_size=node_size,
@@ -419,7 +420,7 @@ def plot_network(G, node_size=300, edge_width_factor=2, cmap="viridis", figsize=
         alpha=0.9
     )
 
-    # Draw edges: width scaled by weight
+    # Draw edges with weight scaling
     nx.draw_networkx_edges(
         G, pos,
         width=weights * edge_width_factor,
@@ -430,18 +431,52 @@ def plot_network(G, node_size=300, edge_width_factor=2, cmap="viridis", figsize=
         connectionstyle='arc3,rad=0.1'
     )
 
-    # Draw labels inside nodes
-    nx.draw_networkx_labels(
-        G, pos,
-        labels={n: str(n) for n in G.nodes()},
-        font_size=8,
-        font_color="black",
-        font_weight="bold"
-    )
+    # Draw labels only if requested
+    if show_labels:
+        nx.draw_networkx_labels(
+            G, pos,
+            labels={n: str(n) for n in G.nodes()},
+            font_size=8,
+            font_color="black",
+            font_weight="bold"
+        )
 
     plt.axis("off")
     plt.title("Network Graph (weighted)")
     plt.show()
+
+
+def plot_node_neighborhood(G, start_node, max_depth, 
+                           node_size=300, edge_width_factor=2, 
+                           cmap="viridis", figsize=(5,5),show_labels=False):
+    """
+    Extracts and plots the subgraph containing all nodes within
+    max_depth hops from start_node.
+    """
+
+    if start_node not in G:
+        raise ValueError(f"Node {start_node} not in graph.")
+
+    # BFS to radius = max_depth
+    nodes_in_radius = nx.single_source_shortest_path_length(G, start_node, cutoff=max_depth)
+    nodes_in_radius = list(nodes_in_radius.keys())
+
+    # Extract induced subgraph
+    subG = G.subgraph(nodes_in_radius).copy()
+
+    # Highlight the central node
+    subG.nodes[start_node]["color"] = "red"
+
+    # Use your existing plotter
+    plot_network(
+        subG,
+        node_size=node_size,
+        edge_width_factor=edge_width_factor,
+        cmap=cmap,
+        figsize=figsize,show_labels=show_labels
+    )
+
+    return subG
 
 print("Imports are sucessfull #######################################")
 
