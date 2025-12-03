@@ -193,13 +193,13 @@ def metric_set(G):
 
 
 
-def randomize_graph(G, method="degree_preserving", nswap=10,swap_factor=100, max_tries_factor=10, max_tries=10000,seed=None):
+def randomize_graph(G, method="config_preserving", nswap=10,swap_factor=100, max_tries_factor=10, max_tries=10000,seed=None):
     """
     Generate a randomized version of graph G.
     """
     E = G.number_of_edges()
     
-    if method == "degree_preserving":
+    if method == "config_preserving":
         G0 = nx.Graph(G)          # converts DiGraph/MultiGraph -> Graph
         G0.remove_edges_from(nx.selfloop_edges(G0))
         M = G0.number_of_edges()
@@ -219,66 +219,102 @@ def randomize_graph(G, method="degree_preserving", nswap=10,swap_factor=100, max
         p = m / (n * (n - 1) / 2)  # probability for ER graph with same density
         G_rand = nx.erdos_renyi_graph(n, p)
     else:
-        raise ValueError("method must be 'degree_preserving' or 'erdos_renyi'")
+        raise ValueError("method must be 'config_preserving' or 'erdos_renyi'")
     return G_rand
 
 
-def rich_club(G, method="degree_preserving", k_max=None,
-              nswap=10, max_tries=100000, n_rand=100):
-    """
-    Compute rich-club coefficients and normalized values.
-    Handles directed graphs and self-loops by simplifying.
-    """
-
+def rich_club(G, method="config_preserving", k_max=None,
+              nswap=10, max_tries=100000, n_rand=100,
+              plot_rand_stats=False):
 
     G = G.copy()
     G.remove_edges_from(nx.selfloop_edges(G))
     G_und = G.to_undirected()
-    
-    #https://networkx.org/documentation/stable/reference/algorithms/generated/networkx.algorithms.richclub.rich_club_coefficient.html
-    rc_real = nx.rich_club_coefficient(G_und, normalized=False,Q=None)
-    
+
+    # real rich-club coefficients
+    rc_real = nx.rich_club_coefficient(G_und, normalized=False, Q=None)
+
     if k_max is None:
         k_max = max(dict(G_und.degree()).values())
 
-
-    # collect random rich-club coefficients
+    # -----------------------------
+    # storage for random graph stats
+    # -----------------------------
     rc_rand_list = []
+    deg_counts_rand = []   # number of nodes with deg > k
+
+    # -----------------------------
+    # randomization loop
+    # -----------------------------
     for _ in range(n_rand):
+
         G_rand = randomize_graph(G_und, method=method, nswap=nswap, max_tries=max_tries)
 
         if G_rand.is_directed() or G_rand.is_multigraph():
             G_rand = nx.Graph(G_rand)
 
-        # remove self-loops in randomized graphs too
         G_rand.remove_edges_from(nx.selfloop_edges(G_rand))
 
+        # rich club for this random graph
         rc_rand = nx.rich_club_coefficient(G_rand, normalized=False, Q=None)
         rc_rand_list.append(rc_rand)
 
-    # compute mean and std for each k
+        # degrees
+        degs_r = dict(G_rand.degree())
+        max_k_r = max(degs_r.values())
+
+        # pad up to k_max
+        count_vec = np.zeros(k_max + 1)
+
+        for k in range(k_max + 1):
+            count_vec[k] = sum(d > k for d in degs_r.values())
+
+        deg_counts_rand.append(count_vec)
+
+    # -----------------------------
+    # processing RC random stats
+    # -----------------------------
     rc_rand_mean = {}
     rc_rand_std = {}
+
     for k in range(k_max + 1):
         values = [rc[k] for rc in rc_rand_list if k in rc]
-        if values:
-            rc_rand_mean[k] = np.mean(values)
-            rc_rand_std[k] = np.std(values)
-        else:
-            rc_rand_mean[k] = np.nan
-            rc_rand_std[k] = np.nan
+        rc_rand_mean[k] = np.mean(values) if values else np.nan
+        rc_rand_std[k] = np.std(values) if values else np.nan
 
-    # normalized coefficients
-    rc_norm = {k: (rc_real.get(k, np.nan) / rc_rand_mean[k]
-                   if rc_rand_mean[k] and rc_rand_mean[k] > 0 else np.nan)
-               for k in range(k_max + 1)}
+    rc_norm = {
+        k: (rc_real.get(k, np.nan) / rc_rand_mean[k]
+            if rc_rand_mean[k] and rc_rand_mean[k] > 0 else np.nan)
+        for k in range(k_max + 1)
+    }
+
+    # -----------------------------
+    # Plotting the random degree statistics
+    # -----------------------------
+    if plot_rand_stats:
+        deg_counts_rand = np.array(deg_counts_rand)  # n_rand × (k_max+1)
+        mean_deg = deg_counts_rand.mean(axis=0)
+        std_deg = deg_counts_rand.std(axis=0)
+
+        ks = np.arange(k_max + 1)
+
+        plt.figure(figsize=(10, 6))
+        plt.plot(ks, mean_deg, label="Mean # nodes with degree > k")
+        plt.fill_between(ks, mean_deg - std_deg, mean_deg + std_deg,
+                         alpha=0.3, label="±1 std")
+        plt.xlabel("Degree threshold k")
+        plt.ylabel("# Nodes with degree > k")
+        plt.title("Randomized Networks: Degree Distribution vs k")
+        plt.grid(True, linestyle="--", alpha=0.4)
+        plt.legend()
+        plt.show()
 
     return rc_real, rc_rand_mean, rc_rand_std, rc_norm
 
 
 def plot_rich_club(rc_real,rc_rand_avg,rc_rand_std,rc_norm,k_vals,k_rich):
     # ======== PLOT REAL vs RANDOMIZED ========
-    fig, ax = plt.subplots(dpi=600)
+    fig, ax = plt.subplots(dpi=300)
     ax.plot(k_vals, list(rc_real.values()), '.-', color='red', label='Real φ(k)')
 
     rand_vals = np.array([rc_rand_avg[k] for k in k_vals])
