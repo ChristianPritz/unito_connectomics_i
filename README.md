@@ -1,7 +1,7 @@
 # unito_connectomics_i
 
 
-This is the code tutorial for lesson I of NEU0278A Computational Neuroscience
+This is the code tutorial for lesson I of NEU0278B Computational Neuroscience
 
 * C.elegans Connectome
 * Graph theory in networkX 
