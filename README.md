@@ -3,7 +3,7 @@
 
 This is the code tutorial for lesson I of NEU0278B Computational Neuroscience
 
-* C.elegans Connectome
+* C.elegans connectome
 * Graph theory in networkX 
 * Rich Club coefficient  
 
