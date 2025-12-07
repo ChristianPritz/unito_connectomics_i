@@ -5,9 +5,10 @@ import matplotlib.pyplot as plt
 import networkx as nx
 from IPython.display import IFrame, display,HTML
 import tempfile, webbrowser, os
+from joblib import Parallel, delayed
 
-
-def plot_adjacency_matrix(G, sort_nodes=True, cmap="jet", step=1, figsize=(2,2)):
+def plot_adjacency_matrix(G, sort_nodes=True, cmap="jet", step=1,
+                          figsize=(2,2), show_labels = True):
     """
     Plot adjacency matrix with zeros shown as white.
     - Automatically detects 'Weight' or 'weight' edge attributes
@@ -47,9 +48,12 @@ def plot_adjacency_matrix(G, sort_nodes=True, cmap="jet", step=1, figsize=(2,2))
     # Ticks
     ax.set_xticks(np.arange(0, n, step))
     ax.set_yticks(np.arange(0, n, step))
-    ax.set_xticklabels(nodes[::step], rotation=90, fontsize=4)
-    ax.set_yticklabels(nodes[::step], fontsize=4)
-
+    if show_labels:
+        ax.set_xticklabels(nodes[::step], rotation=90, fontsize=4)
+        ax.set_yticklabels(nodes[::step], fontsize=4)
+    else:
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
     ax.set_xlabel("Neurons", fontsize=6)
     ax.set_ylabel("Neurons", fontsize=6)
     ax.set_title("Adjacency Matrix - Weights", fontsize=7)
@@ -389,28 +393,118 @@ def plot_weight_distribution(G, bins=50, fit_powerlaw=True):
     plt.show()
 
 
-def plot_network(G, node_size=300, edge_width_factor=2, cmap="viridis",
-                 figsize=(5,5), show_labels=True):
+# def plot_network(G, node_size=300, edge_width_factor=2, cmap="viridis",
+#                  figsize=(5,5), show_labels=True):
 
+#     # Extract weights
+#     weights = np.array([
+#         d.get("Weight", d.get("weight", 1))
+#         for _, _, d in G.edges(data=True)
+#     ])
+
+#     # Normalize edge colors to [0,1]
+#     if len(weights) == 0:
+#         weights_norm = np.ones(len(G.edges()))
+#     else:
+#         w_min, w_max = weights.min(), weights.max()
+#         weights_norm = (weights - w_min) / (w_max - w_min + 1e-9)
+
+#     # Layout
+#     pos = nx.spring_layout(G, seed=42)
+
+#     plt.figure(figsize=figsize)
+
+#     # Draw nodes
+#     nx.draw_networkx_nodes(
+#         G, pos,
+#         node_size=node_size,
+#         node_color="skyblue",
+#         edgecolors="black",
+#         linewidths=1.5,
+#         alpha=0.9
+#     )
+
+#     # Draw edges with weight scaling
+#     nx.draw_networkx_edges(
+#         G, pos,
+#         width=weights * edge_width_factor,
+#         edge_color=weights_norm,
+#         edge_cmap=plt.get_cmap(cmap),
+#         alpha=0.7,
+#         arrows=True,
+#         connectionstyle='arc3,rad=0.1'
+#     )
+
+#     # Draw labels only if requested
+#     if show_labels:
+#         nx.draw_networkx_labels(
+#             G, pos,
+#             labels={n: str(n) for n in G.nodes()},
+#             font_size=8,
+#             font_color="black",
+#             font_weight="bold"
+#         )
+
+#     plt.axis("off")
+#     plt.title("Network Graph (weighted)")
+#     plt.show()
+
+def plot_network(
+    G,
+    node_size=300,
+    cmap="viridis",
+    figsize=(5,5),
+    show_labels=True,
+    edge_width_factor=(0.5, 5),   # (min_width, max_width)
+    scaling="auto"                # "auto" or (min_weight, max_weight)
+):
+    """
+    Plot weighted network with:
+    - edge_width_factor = (min_width, max_width)
+    - scaling = "auto" OR (w_low, w_high) to map weights consistently across graphs.
+    - Legend for edge widths in lower-right corner.
+    """
+
+    # ---------------------------
     # Extract weights
+    # ---------------------------
     weights = np.array([
-        d.get("Weight", d.get("weight", 1))
+        d.get("Weight", d.get("weight", 1.0))
         for _, _, d in G.edges(data=True)
     ])
 
-    # Normalize edge colors to [0,1]
     if len(weights) == 0:
-        weights_norm = np.ones(len(G.edges()))
-    else:
-        w_min, w_max = weights.min(), weights.max()
-        weights_norm = (weights - w_min) / (w_max - w_min + 1e-9)
+        print("Warning: Graph has no edges.")
+        weights = np.array([1.0])
 
+    # Weight domain for normalization
+    if scaling == "auto":
+        w_low, w_high = weights.min(), weights.max()
+    else:
+        w_low, w_high = scaling
+
+    # Clip weights to scaling range
+    weights_clipped = np.clip(weights, w_low, w_high)
+
+    # Normalize weights → [0,1]
+    weights_norm = (weights_clipped - w_low) / (w_high - w_low + 1e-12)
+
+    # ---------------------------
+    # Edge width scaling
+    # ---------------------------
+    wmin, wmax = edge_width_factor
+    edge_widths = wmin + weights_norm * (wmax - wmin)
+
+    # ---------------------------
     # Layout
+    # ---------------------------
     pos = nx.spring_layout(G, seed=42)
 
     plt.figure(figsize=figsize)
 
+    # ---------------------------
     # Draw nodes
+    # ---------------------------
     nx.draw_networkx_nodes(
         G, pos,
         node_size=node_size,
@@ -420,10 +514,12 @@ def plot_network(G, node_size=300, edge_width_factor=2, cmap="viridis",
         alpha=0.9
     )
 
-    # Draw edges with weight scaling
+    # ---------------------------
+    # Draw edges
+    # ---------------------------
     nx.draw_networkx_edges(
         G, pos,
-        width=weights * edge_width_factor,
+        width=edge_widths,
         edge_color=weights_norm,
         edge_cmap=plt.get_cmap(cmap),
         alpha=0.7,
@@ -431,7 +527,9 @@ def plot_network(G, node_size=300, edge_width_factor=2, cmap="viridis",
         connectionstyle='arc3,rad=0.1'
     )
 
-    # Draw labels only if requested
+    # ---------------------------
+    # Draw labels
+    # ---------------------------
     if show_labels:
         nx.draw_networkx_labels(
             G, pos,
@@ -441,14 +539,39 @@ def plot_network(G, node_size=300, edge_width_factor=2, cmap="viridis",
             font_weight="bold"
         )
 
+    # ---------------------------
+    # Add width legend
+    # ---------------------------
+    import matplotlib.lines as mlines
+
+    lw1 = wmin
+    lw2 = (wmin + wmax) / 2
+    lw3 = wmax
+
+    legend_lines = [
+        mlines.Line2D([], [], linewidth=lw1, color="black", label=f"{w_low:.2f}"),
+        mlines.Line2D([], [], linewidth=lw2, color="black", label=f"{(w_low+w_high)/2:.2f}"),
+        mlines.Line2D([], [], linewidth=lw3, color="black", label=f"{w_high:.2f}"),
+    ]
+
+    plt.legend(
+        handles=legend_lines,
+        title="Edge width = weight",
+        loc="lower right",
+        frameon=True,
+        fontsize=8,
+        title_fontsize=9
+    )
+
     plt.axis("off")
     plt.title("Network Graph (weighted)")
     plt.show()
 
 
 def plot_node_neighborhood(G, start_node, max_depth, 
-                           node_size=300, edge_width_factor=2, 
-                           cmap="viridis", figsize=(5,5),show_labels=False):
+                           node_size=300,edge_width_factor = [0.5,5], 
+                           cmap="viridis", figsize=(5,5),
+                           show_labels=False,scaling='auto'):
     """
     Extracts and plots the subgraph containing all nodes within
     max_depth hops from start_node.
@@ -471,12 +594,117 @@ def plot_node_neighborhood(G, start_node, max_depth,
     plot_network(
         subG,
         node_size=node_size,
-        edge_width_factor=edge_width_factor,
+        edge_width_factor = edge_width_factor,
         cmap=cmap,
-        figsize=figsize,show_labels=show_labels
+        figsize=figsize,show_labels=show_labels,
+        scaling=scaling
     )
 
     return subG
+
+
+def indegree_outdegree_ratio(G, use_weights=True):
+
+    weight = "weight" if use_weights else None
+
+    ratios = {}
+    nodes = []
+    vals = []
+    indi = []
+    outdi = []
+    for node in G.nodes():
+        indeg = G.in_degree(node, weight=weight)
+        outdeg = G.out_degree(node, weight=weight)
+        indi.append(indeg)
+        outdi.append(outdeg)
+        if outdeg == 0:
+            ratios[node] = float("inf") if indeg > 0 else 0.0
+            
+        else:
+            ratios[node] = indeg / outdeg
+        nodes.append(node)
+        vals.append(ratios[node])
+    
+    return np.array(nodes), np.array(vals),np.array(outdi),np.array(indi)
+
+
+def clustering_coefficient(G, node):
+    neighbors = list(G.neighbors(node))
+    k = len(neighbors)
+    
+    if k < 2:
+        return 0.0
+    
+    # Count edges between neighbors
+    links = 0
+    for i in range(k):
+        for j in range(i + 1, k):
+            if G.has_edge(neighbors[i], neighbors[j]):
+                links += 1
+                
+    # Clustering coefficient formula
+    return (2 * links) / (k * (k - 1))
+
+def all_clustering_coeffs(G):
+    return {node: clustering_coefficient(G, node) for node in G.nodes()}
+
+def prune_and_track_sccs_parallel(G, order="largest", n_jobs=-1, return_constituents_at=None):
+    sizes1, sizes2 = [], []
+    nodes = list(G.nodes())
+    
+    # Sort nodes by degree
+    if order == "largest":
+        nodes_sorted = sorted(nodes, key=lambda n: G.degree(n), reverse=True)
+    elif order == "smallest":
+        nodes_sorted = sorted(nodes, key=lambda n: G.degree(n))
+    else:
+        raise ValueError("order must be 'largest' or 'smallest'")
+    
+    G_copy = G.copy()
+    snapshots = []
+    
+    # Take snapshots of node sets after each removal
+    for step, node in enumerate(nodes_sorted, 1):
+        G_copy.remove_node(node)
+        if G_copy.number_of_nodes() == 0:
+            break
+        snapshots.append((step, set(G_copy.nodes())))
+    
+    # Run SCC computations in parallel
+    results = Parallel(n_jobs=n_jobs)(
+        delayed(_compute_scc_sizes)(G, nodes_remaining)
+        for _, nodes_remaining in snapshots
+    )
+    
+    # Collect results
+    for size1, size2 in results:
+        sizes1.append(size1)
+        sizes2.append(size2)
+    
+    if return_constituents_at is not None:
+        # Find the snapshot that corresponds to the requested step
+        match = next(((step, nodes_remaining) for step, nodes_remaining in snapshots 
+                      if step == return_constituents_at), None)
+        if match is not None:
+            step, nodes_remaining = match
+            H = G.subgraph(nodes_remaining).copy()
+            comps = sorted(nx.strongly_connected_components(H), key=len, reverse=True)
+            scc1_nodes = comps[0] if len(comps) > 0 else set()
+            scc2_nodes = comps[1] if len(comps) > 1 else set()
+            return sizes1, sizes2, scc1_nodes, scc2_nodes
+    
+    return sizes1, sizes2
+
+
+def _compute_scc_sizes(G, nodes_remaining):
+    H = G.subgraph(nodes_remaining).copy()
+    comps = sorted(nx.strongly_connected_components(H), key=len, reverse=True)
+    size1 = len(comps[0]) if len(comps) > 0 else 0
+    size2 = len(comps[1]) if len(comps) > 1 else 0
+    return size1, size2
+
+
+
 
 print("Imports are sucessfull #######################################")
 
